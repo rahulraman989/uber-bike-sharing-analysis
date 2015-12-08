@@ -1,0 +1,21 @@
+SELECT
+    f.id                AS "Trip ID"
+    , f.duration        AS "Duration"
+    , to_char(f.start_date, "MM/DD/YYYY HH24:MI") AS "Start Date"
+    , s1.station_name   AS "Start Station"
+    , s1.terminal_name  AS "Start Terminal"
+    , to_char(f.end_date, "MM/DD/YYYY HH24:MI")   AS "End Date"
+    , s2.station_name   AS "End Station"
+    , s2.terminal_name  AS "End Terminal"
+    , en.entity_name    AS "Bike #"
+    , en.entity_type    AS "Subscriber Type"
+    , zp.zip_code       AS "Zip Code"
+FROM
+    fact_trips f
+    INNER JOIN dim_stations   s1 ON f.start_station_id = s1.id
+    INNER JOIN dim_stations   s2 ON f.end_station_id = s2.id
+    INNER JOIN dim_entity     en ON f.entity_id = en.id
+    INNER JOIN dim_entity_zip zp ON zp.entity_id = en.id
+    
+WHERE f.start_date >= to_timestamp("03-01-2014 00:00:00", "MM-DD-YYYY HH24:MI:SS")
+AND   f.start_date <= to_timestamp("08-31-2014 23:59:59", "MM-DD-YYYY HH24:MI:SS");
