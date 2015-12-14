@@ -226,14 +226,14 @@ round(prop.table(table(cut(penalty$duration.m, breaks=seq(30, 210, 15)))), 3)</c
 </div>
 <div id="which-route-has-more-30-45-minutes-penalty-rides-part-2" class="section level3">
 <h3>5.2 Which route has more 30-45 minutes’ penalty rides? Part 2</h3>
-<p><a href="https://plot.ly/~watanabe8760/51" class="uri">https://plot.ly/~watanabe8760/51</a><br />The data is the same as the previous, jsut the Y-axis changed to total number of trips. What happens is that popular routes float up. If a point keeps his fat even when it floats up, maybe the route (point) has a problem. This float-up strategy solves the inconvenience in the first graph. We can search fatty points in higher position to detect problematic points.</p>
-<p>As we can see, shorter trips are more pupular and float up as small dot points. But if you look closely at around (2, 60) on the graph, you can find a relatively fatty point which is a route from “Market at 10th”&quot; to “Howard at 2nd”. The route has 17 penalty rides out of 63 trips. The ratio is a bit high for the number of trips. What’s going on here? Let’s look at the details of this route.</p>
+<p><a href="https://plot.ly/~watanabe8760/51" class="uri">https://plot.ly/~watanabe8760/51</a><br />The data is the same as the previous, jsut the Y-axis changed to total number of trips. What happens is that popular routes float up. If a point keeps his fat even when it floats up, maybe the route (point) has a problem. This float-up strategy solves the inconvenience in the first graph. We can search fatty points in higher position to detect problematic ones.</p>
+<p>As we can see, shorter trips are more pupular and float up as small dot points. But if you look closely at around (2, 60) on the graph, you can find a relatively fatty point which is a route from “Market at 10th” to “Howard at 2nd”. The route has 17 penalty rides out of 63 trips. The ratio is a bit high for the number of trips. What’s going on here? Let’s look at the details of this route.</p>
 </div>
-<div id="trip-time-distribution-prototype" class="section level3">
-<h3>5.3 Trip time distribution (Prototype)</h3>
-<p><a href="https://plot.ly/~watanabe8760/55" class="uri">https://plot.ly/~watanabe8760/55</a><br />Technically this is just a histogram, not a tool. It plots a distribution of trip time for the route I discussed in the previous tool section. To focus the issue, only trips whose trip time is between 0 and 60 minutes are plotted.</p>
-<p>The distribution has two peaks. Two peaks in one route. This is very interesting and a target of further investigation.</p>
-<p>In the future dropboxes of start and end stations, slide bar of distribution range will be added at the side of graph so that user can interactively create plots accroding to his/her interest.</p>
+<div id="trip-time-distribution" class="section level3">
+<h3>5.3 Trip time distribution</h3>
+<p><a href="https://teru.shinyapps.io/trip-time-dist" class="uri">https://teru.shinyapps.io/trip-time-dist</a></p>
+<p>This tool is a different type from the previous two.<br />You can select (1) Type of Membership and (2) Start &amp; End of Route from the left panel and see a trip time distribution for the route. Note, the tool does not support routes which start and end in different cities.</p>
+<p>If you check the trip time distribution of the route from “Market at 10th” to “Howard at 2nd” which are both in San Francisco, two peaks are observed. One is between 10 and 15 minutes and the other is between 30 and 35 minutes. Two peaks in one route. This is very interesting and a target of further investigation. If we can see the result of questionnaire campaign I suggested above, this weird distribution might make more sense.</p>
 </div>
 </div>
 

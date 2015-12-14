@@ -4,6 +4,7 @@ library(zipcode)
 library(dplyr)
 library(plotly)
 library(geosphere)
+library(circlize)
 
 
 ##### Load data #####
@@ -26,83 +27,138 @@ names(station) <- c('id', 'name', 'lat', 'long',
                     'dockcount', 'landmark', 'installed.on')
 
 
-
-##### Data Type Conversion #####
-# Convert date (character) into POSIXct class
-trip$s.date <- mdy_hm(trip$s.date, tz='US/Pacific')
-trip$e.date <- mdy_hm(trip$e.date, tz='US/Pacific')
-station$installed.on <- mdy(station$installed.on, tz='US/Pacific')
-
-# Reorder landmark from south to north
-station$landmark <- factor(station$landmark, 
-                           levels=c("San Jose", "Mountain View", "Palo Alto", 
-                                    "Redwood City", "San Francisco"))
-
-
-
-##### Data Cleansing #####
-# Remove zipcode for Customer users
-trip$zip[trip$type == 'Customer'] <- NA
-table(nchar(trip$zip, keepNA=T), useNA='always')
-# Clean up zipcode
-trip$zip <- clean.zipcodes(trip$zip)
-table(nchar(trip$zip, keepNA=T), useNA='always')
-# Remove zipcodes which do not exist
-data(zipcode)
-trip$zip[!(trip$zip %in% zipcode$zip)] <- NA
-table(trip$zip, useNA='always')
-length(unique(trip$zip))
-# Convert to factor
-trip$zip <- as.factor(trip$zip)
-
-
-##### Feature Engineering #####
-# Add minutes version of duration
-trip$duration.m <- trip$duration / 60
-
-# Extract month, day of the week and hour
-trip$s.month <- as.factor(month(trip$s.date, label=T, abbr=T))
-trip$s.wday <- as.factor(wday(trip$s.date, label=T, abbr=T))
-trip$s.day <- day(trip$s.date)
-trip$s.hour <- as.factor(hour(trip$s.date))
-trip$e.month <- as.factor(month(trip$e.date, label=T, abbr=T))
-trip$e.wday <- as.factor(wday(trip$e.date, label=T, abbr=T))
-trip$e.day <- day(trip$e.date)
-trip$e.hour <- as.factor(hour(trip$e.date))
-
-
-
-##### Link Analysis - PageRank of station #####
-# Create transition matrix for stations (total of each column is 1)
-link <- table(trip[, c('e.terminal', 's.terminal')])
-link <- t(t(link) / colSums(link))
-# Compute rank of stations
-r <- rep(1, 70)
-beta <- 0.9
-for (i in 1:500) {
-  r_ <- beta * link %*% r + (1 - beta)
-  #print(r_[1])
-  if (sum(abs(r - r_)) < 1e-06) break
-  r <- r_
+prepareTrip <- function(trip, station) {
+  # Trip data preprocess
+  #
+  # Args:
+  #   trip   : data.frame, 201408_trip_data.csv
+  #   station: data.frame, 201408_station_data.csv
+  #
+  # Return:
+  #   trip   : data.frame, 201408_trip_data.csv modified
+  
+  # Add minutes version of duration
+  trip$duration.m <- trip$duration / 60
+  
+  # Convert date (character) into POSIXct class
+  trip$s.date <- mdy_hm(trip$s.date, tz='US/Pacific')
+  trip$e.date <- mdy_hm(trip$e.date, tz='US/Pacific')
+  
+  # Extract month, day of the week and hour
+  trip$s.month <- as.factor(month(trip$s.date, label=T, abbr=T))
+  trip$s.wday <- as.factor(wday(trip$s.date, label=T, abbr=T))
+  trip$s.day <- day(trip$s.date)
+  trip$s.hour <- as.factor(hour(trip$s.date))
+  trip$e.month <- as.factor(month(trip$e.date, label=T, abbr=T))
+  trip$e.wday <- as.factor(wday(trip$e.date, label=T, abbr=T))
+  trip$e.day <- day(trip$e.date)
+  trip$e.hour <- as.factor(hour(trip$e.date))
+  
+  # Clean up zipcode
+  data(zipcode)
+  trip$zip[trip$type == 'Customer'] <- NA   # zipcodes of Customer are invalid
+  trip$zip <- clean.zipcodes(trip$zip)      # clean up
+  trip$zip[!(trip$zip %in% zipcode)] <- NA  # remove zipcodes which don't exist
+  trip$zip <- as.factor(trip$zip)
+  
+  # Add start and end landmark
+  trip$s.landmark <- sapply(trip$s.terminal, 
+                            FUN=function(x) station$landmark[station$id == x])
+  trip$e.landmark <- sapply(trip$e.terminal, 
+                            FUN=function(x) station$landmark[station$id == x])
+  return(trip)
 }
-# Add rank info to station data.frame
-rr <- data.frame(terminal=unlist(dimnames(r)), 
-                 rank=as.vector(r), 
-                 row.names=NULL)
-station <- merge(station, rr, by.x='id', by.y='terminal')
-rm(link, beta, i, r, r_, rr)
+trip <- prepareTrip(trip, station)
+
+prepareStation <- function(station) {
+  # Station data preprocess
+  #
+  # Args:
+  #   station: data.frame, 201408_station_data.csv
+  #
+  # Return:
+  #   station: data.frame, 201408_station_data.csv modified
+  
+  # Convert date (character) into POSIXct class
+  station$installed.on <- mdy(station$installed.on, tz='US/Pacific')
+  # Reorder landmark from south to north
+  station$landmark <- factor(station$landmark, 
+                             levels=c("San Jose", "Mountain View", "Palo Alto", 
+                                      "Redwood City", "San Francisco"))
+  return(station)
+}
+station <- prepareStation(station)
+
+createRDS <- function(trip, station) {
+  # Create RDS files for Shiny App
+  #
+  # Args:
+  #   trip   : data.frame, output from function 'prepareTrip'
+  #   station: data.frame, output from function 'prepareStation'
+  #
+  saveRDS(trip, './shiny-dist/rds/trip.rds')
+  saveRDS(station, './shiny-dist/rds/station.rds')
+}
+createRDS(trip, station)
 
 
 
-##### Balance of departure and arrival #####
-link <- table(trip[, c('e.terminal', 's.terminal')])
-balance <- data.frame(departure=colSums(link), arrival=rowSums(link))
-balance$dif <- balance$arrival - balance$departure
-balance$terminal <- row.names(balance)
+linkAnalysis <- function(trip, station) {
+  # Apply Google PageRank algorithm to trip infomation
+  #
+  # Args:
+  #   trip   : data.frame, output from function 'prepareTrip'
+  #   station: data.frame, output from function 'prepareStation'
+  #
+  # Return:
+  #   station: data.frame, PageRank is added
+  
+  # Create transition matrix for stations (total of each column is 1)
+  link <- table(trip[, c('e.terminal', 's.terminal')])
+  link <- t(t(link) / colSums(link))
+  # Compute rank of stations
+  r <- rep(1, 70)
+  beta <- 0.9
+  for (i in 1:500) {
+    r_ <- beta * link %*% r + (1 - beta)
+    #print(r_[1])
+    if (sum(abs(r - r_)) < 1e-06) break
+    r <- r_
+  }
+  
+  # Add rank info to station data.frame
+  rr <- data.frame(terminal=unlist(dimnames(r)), 
+                   rank=as.vector(r), 
+                   row.names=NULL)
+  station <- merge(station, rr, by.x='id', by.y='terminal')
+  
+  return(station)
+}
+station <- linkAnalysis(trip, station)
 
-# Add departure, arrival and diff to station
-station <- merge(station, balance, by.x='id', by.y='terminal')
-rm(link, balance)
+
+
+getBalance <- function(trip, station) {
+  # Compute balance of departure and arrival in each station
+  #
+  # Args:
+  #   trip   : data.frame, output from function 'prepareTrip'
+  #   station: data.frame, output from function 'prepareStation'
+  #
+  # Return:
+  #   station: data.frame, balance info is added
+  
+  link <- table(trip[, c('e.terminal', 's.terminal')])
+  balance <- data.frame(departure=colSums(link), arrival=rowSums(link))
+  balance$dif <- balance$arrival - balance$departure
+  balance$terminal <- row.names(balance)
+  
+  # Add departure, arrival and diff to station
+  station <- merge(station, balance, by.x='id', by.y='terminal')
+  
+  return(station)
+}
+station <- getBalance(trip, station)
 
 
 
@@ -123,6 +179,8 @@ ggplot(station.ordered, aes(x=name, y=rank, fill=landmark)) +
   geom_bar(stat='identity') +
   coord_flip()
 
+
+
 ##### Exploratory analysis - Number of arrival #####
 # Total number of arrival by heatmap 1
 heatmap(table(trip[, c('e.terminal', 's.terminal')]),
@@ -132,6 +190,8 @@ heatmap(table(trip[, c('e.terminal', 's.terminal')]),
 # Total number of arrival by heatmap 2
 plot_ly(z=table(trip[, c('e.terminal', 's.terminal')]),
         type='heatmap')
+
+
 
 ##### Exploratory analysis - Penalty ride (more than 30 mins) #####
 # How many trips exceeded 30 mins?
@@ -144,7 +204,7 @@ table(trip$duration.m > 30, trip$type)
 # How much propotion of trips exceeded 30 mins by member type?
 prop.table(table(trip$duration.m > 30, trip$type), margin=2)
 
-plot_ly(Z=table(trip$duration.m > 30, trip$type), type='table')
+
 
 ##### Exploratory analysis - Subscriber user's penalty ride #####
 # Extract penalty ride of Subscriber
@@ -161,6 +221,8 @@ ggplotly(gg)
 # Show distribution by 15 mins interval
 table(cut(penalty$duration.m, breaks=seq(30, 210, 15)), useNA='always')
 round(prop.table(table(cut(penalty$duration.m, breaks=seq(30, 210, 15)), useNA='always')), 3)
+
+
 
 ##### Exploratory analysis - Subscriber user's penalty ride between 30 and 45 mins #####
 penalty2 <- trip[trip$type == 'Subscriber' & 
@@ -179,11 +241,12 @@ table(penalty2[, c('e.month', 'e.day')])
 
 
 ##### Summarize trip routes #####
-summarizeByRoute <- function(trip) {
+summarizeByRoute <- function(trip, station) {
   # Aggregate and summarize by route
   #
   # Args:
-  #   trip: data.frame, 201408_trip_data.csv + preparation above
+  #   trip   : data.frame, 201408_trip_data.csv + preparation above
+  #   station: data.frame, 201408_station_data.csv + preparation above
   #
   # Return:
   #   Route summary
@@ -221,7 +284,7 @@ summarizeByRoute <- function(trip) {
                                 "Palo Alto", "Redwood City", "San Francisco"))
   return(route)
 }
-route <- summarizeByRoute(trip[trip$type == 'Subscriber', ])
+route <- summarizeByRoute(trip[trip$type == 'Subscriber', ], station)
 
 
 
@@ -363,6 +426,18 @@ showTripTimeDist <- function(trip, s.terminal, e.terminal, lower, upper) {
 }
 showTripTimeDist(trip, 67, 63, 0, 60)
 
+
+
+##### (Prototype) Chord Diagram #####
+trip %>%
+  group_by(e.station, s.station) %>%
+  summarize(count=n()) %>%
+  chordDiagram
+
+trip[trip$type == 'Subscriber', ] %>%
+  group_by(e.station, s.station) %>%
+  summarize(count=n()) %>%
+  chordDiagram
 
 
 ##### (Prototype) Map Visualization #####

@@ -175,13 +175,13 @@ What's a little intuitive in this graph is that the size of points does not dire
 https://plot.ly/~watanabe8760/51  
 The data is the same as the previous, jsut the Y-axis changed to total number of trips. What happens is that popular routes float up. If a point keeps his fat even when it floats up, maybe the route (point) has a problem. This float-up strategy solves the inconvenience in the first graph. We can search fatty points in higher position to detect problematic ones.  
 
-As we can see, shorter trips are more pupular and float up as small dot points. But if you look closely at around (2, 60) on the graph, you can find a relatively fatty point which is a route from "Market at 10th"" to "Howard at 2nd". The route has 17 penalty rides out of 63 trips. The ratio is a bit high for the number of trips. What's going on here? Let's look at the details of this route.  
+As we can see, shorter trips are more pupular and float up as small dot points. But if you look closely at around (2, 60) on the graph, you can find a relatively fatty point which is a route from "Market at 10th" to "Howard at 2nd". The route has 17 penalty rides out of 63 trips. The ratio is a bit high for the number of trips. What's going on here? Let's look at the details of this route.  
 
-### 5.3 Trip time distribution (Prototype)
-https://plot.ly/~watanabe8760/55  
-Technically this is just a histogram, not a tool. It plots a distribution of trip time for the route I discussed in the previous tool section. To focus the issue, only trips whose trip time is between 0 and 60 minutes are plotted.  
+### 5.3 Trip time distribution
+https://teru.shinyapps.io/trip-time-dist  
 
-The distribution has two peaks. Two peaks in one route. This is very interesting and a target of further investigation.  
+This tool is a different type from the previous two.  
+You can select (1) Type of Membership and (2) Start & End of Route from the left panel and see a trip time distribution for the route. Note, the tool does not support routes which start and end in different cities.  
 
-In the future dropboxes of start and end stations, slide bar of distribution range will be added at the side of graph so that user can interactively create plots accroding to his/her own interest.  
+If you check the trip time distribution of the route from "Market at 10th" to "Howard at 2nd" which are both in San Francisco, two peaks are observed. One is between 10 and 15 minutes and the other is between 30 and 35 minutes. Two peaks in one route. This is very interesting and a target of further investigation. If we can see the result of questionnaire campaign I suggested above, this weird distribution might make more sense.
 
